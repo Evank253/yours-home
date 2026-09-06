@@ -1,27 +1,23 @@
 # YOURS
 
-**A home you’re in charge of.**
+**A home you are in charge of.** Private. Owner: Evank253.
 
-Private product source. Owner: Evank253.
-
-## Run
+## v1 is the house. Not the industry.
 
 ```
+git clone -b main https://github.com/Evank253/yours-home.git
 cd yours-home
 npm start
 ```
 
-Open http://127.0.0.1:3333
+http://127.0.0.1:3333
 
-Create a home (email + handle + password). Then:
+Create a home. Build a page. Search a name. Accept a person. Post. Clarity. Doors.
 
-- `/home` — desk + posts + likes
-- `/customize` — build the page (House / Grid / Stage)
-- `/u/yourhandle` — public page
-- `/search` — find people by name (no faces)
-- `/live` — live door stub (Yours destination)
-- `/studio` — start a group
+### Built
+Door, desk, page plans, official YouTube/Vimeo embeds, circle + accept, groups, live flag, Clarity, Doors.
 
-Data lives in `data/db.json` on your machine (gitignored). Passwords are scrypt-hashed. Session cookie is HttpOnly.
+### Not v1
+OAuth satellites, RTMP, mesh, SPIRE, Unreal open, marketplace, public host.
 
-Set `YOURS_SESSION_SECRET` before anything public.
+Set YOURS_SESSION_SECRET before any public machine.
