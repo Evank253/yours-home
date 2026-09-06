@@ -1,9 +1,10 @@
-# Terms (draft — have a lawyer finish before public launch)
+# Terms (draft — counsel before public)
 
-You own your files. Yours receives a license to host what you publish.
-You warrant you have rights to media and music you upload.
+13+. One person, one home. No selling the account.
+You own files; YOURS hosts what you publish.
+You warrant rights to media and music.
 Official embeds stay official.
-One person, one home. No selling the account.
-DMCA agent to be named before public.
-Export: you may leave with page JSON and media.
-Under-13: not permitted on this product.
+No bots, scrape, or impersonation.
+DMCA agent to be named.
+Export page JSON + uploads.
+AS-IS during private build.
