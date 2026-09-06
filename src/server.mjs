@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { load, save, defaultPage } from "./store.mjs";
+import { listCircle, acceptCircle } from "./circle.mjs";
 import {
   hashPassword,
   checkPassword,
@@ -161,6 +162,19 @@ const server = http.createServer(async (req, res) => {
         db.friends.push({ a: user.handle, b: to, status: "requested", at: Date.now() });
         save(db);
       }
+      return json(res, 200, { ok: true });
+    }
+    if (method === "GET" && url.pathname === "/api/friends") {
+      const user = me(req, db);
+      if (!user) return json(res, 401, { error: "Sign in." });
+      return json(res, 200, listCircle(db, user.handle));
+    }
+    if (method === "POST" && url.pathname === "/api/friends/accept") {
+      const user = me(req, db);
+      if (!user) return json(res, 401, { error: "Sign in." });
+      const from = String((await body(req)).handle || "").toLowerCase();
+      if (!acceptCircle(db, user.handle, from)) return json(res, 404, { error: "No request." });
+      save(db);
       return json(res, 200, { ok: true });
     }
     if (method === "POST" && url.pathname === "/api/groups") {
