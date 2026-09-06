@@ -216,6 +216,9 @@ const server = http.createServer(async (req, res) => {
     if (method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
       return sendFile(res, path.join(publicDir, "index.html"));
     }
+    if (method === "GET" && url.pathname === "/clarity") {
+      return sendFile(res, path.join(publicDir, "clarity.html"));
+    }
     const spa = ["/home", "/customize", "/search", "/live", "/studio"];
     if (method === "GET" && (spa.includes(url.pathname) || url.pathname.startsWith("/u/"))) {
       return sendFile(res, path.join(publicDir, "app.html"));
