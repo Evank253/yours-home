@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { load, save, defaultPage } from "./store.mjs";
 import { listCircle, acceptCircle } from "./circle.mjs";
+import { handleExtra } from "./extra.mjs";
 import {
   hashPassword,
   checkPassword,
@@ -75,8 +76,22 @@ const server = http.createServer(async (req, res) => {
   const method = req.method || "GET";
   const db = load();
   try {
+    const extraHit = await handleExtra({
+      method,
+      url,
+      db,
+      me: () => me(req, db),
+      json: (code, obj, extra) => json(res, code, obj, extra),
+      body: () => body(req),
+      save,
+    });
+    if (extraHit) return;
+
     if (method === "POST" && url.pathname === "/api/signup") {
       const b = await body(req);
+      if (!b.accepted || !b.age13) {
+        return json(res, 400, { error: "Agree to the terms. Be 13 or older." });
+      }
       const email = String(b.email || "").trim().toLowerCase();
       const handle = String(b.handle || "").trim().toLowerCase();
       const displayName = String(b.displayName || handle).trim();
@@ -95,6 +110,7 @@ const server = http.createServer(async (req, res) => {
         email, handle, displayName,
         password: hashPassword(password),
         createdAt: Date.now(),
+        acceptedAt: Date.now(),
       };
       db.users.push(user);
       db.pages[handle] = defaultPage(user);
@@ -207,7 +223,12 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
     if (method === "GET" && url.pathname === "/api/feed") {
-      return json(res, 200, { posts: [...db.posts].slice(-40).reverse() });
+      const comments = db.comments || [];
+      const posts = [...db.posts].slice(-40).reverse().map((p) => ({
+        ...p,
+        comments: comments.filter((c) => c.postId === p.id).slice(-8),
+      }));
+      return json(res, 200, { posts });
     }
     if (method === "POST" && url.pathname === "/api/posts") {
       const user = me(req, db);
@@ -236,7 +257,7 @@ const server = http.createServer(async (req, res) => {
     if (method === "GET" && url.pathname === "/doors") {
       return sendFile(res, path.join(publicDir, "doors.html"));
     }
-    const spa = ["/home", "/customize", "/search", "/live", "/studio"];
+    const spa = ["/home", "/customize", "/search", "/live", "/studio", "/settings"];
     if (method === "GET" && (spa.includes(url.pathname) || url.pathname.startsWith("/u/"))) {
       return sendFile(res, path.join(publicDir, "app.html"));
     }
