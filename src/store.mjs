@@ -12,12 +12,15 @@ function empty() {
     groups: [],
     lives: {},
     posts: [],
+    comments: [],
   };
 }
 
 export function load() {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
+    const db = JSON.parse(fs.readFileSync(file, "utf8"));
+    if (!Array.isArray(db.comments)) db.comments = [];
+    return db;
   } catch {
     return empty();
   }
