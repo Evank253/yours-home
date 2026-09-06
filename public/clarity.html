@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YOURS — Clarity</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    .bench { max-width: 64rem; margin: 0 auto; padding: 1.25rem 1.4rem 3rem; }
+    .stage-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 800px) { .stage-row { grid-template-columns: 1fr; } }
+    canvas { width: 100%; height: auto; background: #111; border-radius: 0.5rem; }
+    .sliders label { margin-top: 0.7rem; }
+    .sliders input[type=range] { width: 100%; }
+    .warn { color: #c4a574; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.82rem; line-height: 1.45; }
+  </style>
+</head>
+<body class="app">
+  <header class="top">
+    <a class="mark" href="/home">YOURS</a>
+    <nav>
+      <a href="/home">Desk</a>
+      <a href="/customize">Build</a>
+      <a href="/clarity">Clarity</a>
+    </nav>
+  </header>
+  <div class="bench">
+    <h2>Clarity</h2>
+    <p class="warn">
+      This bench sharpens, lifts local contrast, and can upscale with a careful kernel.
+      It does not see like an eye and it does not beat a microscope. Those are optics.
+      It will not outrun every lab model on earth. It makes your file read cleaner on the page.
+    </p>
+    <div class="card sliders">
+      <input type="file" id="file" accept="image/*" />
+      <label>Scale <span id="sv">1x</span></label>
+      <input type="range" id="scale" min="1" max="2" step="1" value="1" />
+      <label>Edge pull <span id="av">0.35</span></label>
+      <input type="range" id="amount" min="0" max="1.2" step="0.05" value="0.35" />
+      <label>Local contrast <span id="cv">0.25</span></label>
+      <input type="range" id="contrast" min="0" max="1" step="0.05" value="0.25" />
+      <label>Fine grain hold <span id="dv">0.15</span></label>
+      <input type="range" id="denoise" min="0" max="0.6" step="0.05" value="0.15" />
+      <div class="row" style="margin-top:1rem">
+        <button class="gold" type="button" id="run">Render</button>
+        <button class="ghost" type="button" id="save">Download</button>
+      </div>
+    </div>
+    <div class="stage-row">
+      <div><p class="sub">Source</p><canvas id="src"></canvas></div>
+      <div><p class="sub">Clarity</p><canvas id="out"></canvas></div>
+    </div>
+  </div>
+  <script src="/clarity.js"></script>
+</body>
+</html>
