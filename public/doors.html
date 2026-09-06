@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YOURS — Doors</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/app.css" />
+  <style>
+    .bench { max-width: 72rem; margin: 0 auto; padding: 1.25rem 1.4rem 3rem; }
+    .frames { display: grid; grid-template-columns: 16fr 9fr 9fr; gap: 0.8rem; align-items: start; }
+    @media (max-width: 900px) { .frames { grid-template-columns: 1fr; } }
+    canvas { width: 100%; height: auto; background: #111; border-radius: 0.4rem; }
+    .hint { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.75rem; color: var(--muted); }
+  </style>
+</head>
+<body class="app">
+  <header class="top">
+    <a class="mark" href="/home">YOURS</a>
+    <nav>
+      <a href="/home">Desk</a>
+      <a href="/clarity">Clarity</a>
+      <a href="/doors">Doors</a>
+    </nav>
+  </header>
+  <div class="bench">
+    <h2>Doors</h2>
+    <p class="sub">One still. Three honest frames — 16:9, 1:1, 9:16 — with your house written on them. Other apps crop. This one always points home.</p>
+    <div class="card">
+      <input type="file" id="file" accept="image/*" />
+      <label style="margin-top:0.8rem">Handle on the card</label>
+      <input id="handle" placeholder="jordan" />
+      <div class="row" style="margin-top:0.8rem">
+        <button class="gold" type="button" id="cut">Cut doors</button>
+      </div>
+    </div>
+    <div class="frames">
+      <div><p class="hint">16:9 · long door</p><canvas id="c169"></canvas><button class="ghost" data-dl="c169">Download</button></div>
+      <div><p class="hint">1:1 · square door</p><canvas id="c11"></canvas><button class="ghost" data-dl="c11">Download</button></div>
+      <div><p class="hint">9:16 · tall door</p><canvas id="c916"></canvas><button class="ghost" data-dl="c916">Download</button></div>
+    </div>
+  </div>
+  <script src="/doors.js"></script>
+</body>
+</html>
