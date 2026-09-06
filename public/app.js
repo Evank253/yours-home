@@ -12,7 +12,7 @@ async function session() {
   try {
     const d = await api("/api/me");
     me = d.user;
-    who.innerHTML = "@" + me.handle + ' <button class="ghost" id="out" type="button">Leave</button>';
+    who.innerHTML = "@" + me.handle + ' <a class="handle" href="/settings">Keys</a> <button class="ghost" id="out" type="button">Leave</button>';
     const out = $("#out");
     if (out) out.onclick = async () => { await api("/api/logout", { method: "POST", body: "{}" }); location.href = "/"; };
   } catch {
@@ -27,6 +27,7 @@ function route() {
   if (p === "/search") return showSearch();
   if (p === "/live") return showLive();
   if (p === "/studio") return showStudio();
+  if (p === "/settings") return showSettings();
   return showDesk();
 }
 function showDesk() {
@@ -53,9 +54,21 @@ async function loadFriends() {
 }
 async function loadFeed() {
   const { posts } = await api("/api/feed");
-  $("#feed").innerHTML = posts.length ? posts.map((p) => `<div class="card"><a class="handle" href="/u/${p.handle}">@${p.handle}</a><p>${escapeHtml(p.text)}</p><button class="ghost" data-like="${p.id}" type="button">Like ${p.likes}</button></div>`).join("") : `<p class="sub">No posts yet.</p>`;
+  $("#feed").innerHTML = posts.length ? posts.map((p) => {
+    const notes = (p.comments || []).map((c) => `<p class="sub">@${escapeHtml(c.handle)} — ${escapeHtml(c.text)}</p>`).join("");
+    return `<div class="card"><a class="handle" href="/u/${p.handle}">@${p.handle}</a><p>${escapeHtml(p.text)}</p><button class="ghost" data-like="${p.id}" type="button">Like ${p.likes}</button><div>${notes}</div><div class="row" style="margin-top:0.4rem"><input data-c="${p.id}" placeholder="Reply" style="flex:1" /><button class="ghost" data-send="${p.id}" type="button">Reply</button></div></div>`;
+  }).join("") : `<p class="sub">No posts yet.</p>`;
   document.querySelectorAll("[data-like]").forEach((b) => {
     b.onclick = async () => { const { post } = await api("/api/posts/" + b.dataset.like + "/like", { method: "POST", body: "{}" }); b.textContent = "Like " + post.likes; };
+  });
+  document.querySelectorAll("[data-send]").forEach((b) => {
+    b.onclick = async () => {
+      const box = document.querySelector('[data-c="' + b.dataset.send + '"]');
+      try {
+        await api("/api/posts/" + b.dataset.send + "/comments", { method: "POST", body: JSON.stringify({ text: box.value }) });
+        loadFeed();
+      } catch (e) { alert(e.message); }
+    };
   });
 }
 function officialEmbed(url) {
@@ -125,10 +138,42 @@ async function showLive() {
 async function showStudio() {
   if (!me) return (view.innerHTML = `<p class="sub">Sign in first.</p>`);
   const { groups } = await api("/api/groups");
-  view.innerHTML = `<h2>Studio</h2><p class="sub">Rooms on this house.</p><div class="card row"><input id="gname" placeholder="Room name" style="flex:1" /><button class="gold" id="gmake" type="button">Start group</button></div><div id="glist">${groups.map((g) => `<div class="card">${escapeHtml(g.name)} · owner @${g.owner}</div>`).join("") || "<p class='sub'>No rooms yet.</p>"}</div>`;
+  const rooms = await api("/api/rooms").catch(() => ({ groups: [] }));
+  view.innerHTML = `<h2>Studio</h2><p class="sub">Rooms on this house.</p><div class="card row"><input id="gname" placeholder="Room name" style="flex:1" /><button class="gold" id="gmake" type="button">Start group</button></div><div id="glist">${groups.map((g) => `<div class="card">${escapeHtml(g.name)} · owner @${g.owner}</div>`).join("") || "<p class='sub'>Your rooms will land here.</p>"}</div><h2>Open rooms</h2><div>${(rooms.groups || []).map((g) => `<div class="card hit"><span>${escapeHtml(g.name)} · @${g.owner}</span><button class="ghost" data-join="${g.id}" type="button">Join</button></div>`).join("") || "<p class='sub'>None yet.</p>"}</div>`;
   $("#gmake").onclick = async () => { try { await api("/api/groups", { method: "POST", body: JSON.stringify({ name: $("#gname").value }) }); showStudio(); } catch (e) { alert(e.message); } };
+  document.querySelectorAll("[data-join]").forEach((b) => {
+    b.onclick = async () => { try { await api("/api/groups/" + b.dataset.join + "/join", { method: "POST", body: "{}" }); showStudio(); } catch (e) { alert(e.message); } };
+  });
 }
-function escapeHtml(s) { return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
-function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
+async function showSettings() {
+  if (!me) return (view.innerHTML = `<p class="sub">Sign in first.</p>`);
+  view.innerHTML = `<h2>Keys</h2><p class="sub">Your name on the door. Export what we store. Leave for good if you want the house gone.</p><div class="card"><label>Display name</label><input id="dname" value="${escapeAttr(me.displayName)}" /><div class="row" style="margin-top:0.7rem"><button class="gold" id="saveName" type="button">Save name</button><button class="ghost" id="exp" type="button">Export</button></div></div><div class="card"><p class="sub">This deletes the home on this machine.</p><button class="ghost" id="gone" type="button">Delete home</button></div>`;
+  $("#saveName").onclick = async () => {
+    try {
+      const { user } = await api("/api/me", { method: "PUT", body: JSON.stringify({ displayName: $("#dname").value }) });
+      me = { ...me, ...user };
+      alert("Saved.");
+    } catch (e) { alert(e.message); }
+  };
+  $("#exp").onclick = async () => {
+    try {
+      const pack = await api("/api/export");
+      const a = document.createElement("a");
+      a.download = "yours-" + me.handle + ".json";
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(pack, null, 2)], { type: "application/json" }));
+      a.click();
+    } catch (e) { alert(e.message); }
+  };
+  $("#gone").onclick = async () => {
+    if (!confirm("Delete this home on this machine?")) return;
+    try {
+      await api("/api/me", { method: "DELETE" });
+      await api("/api/logout", { method: "POST", body: "{}" });
+      location.href = "/";
+    } catch (e) { alert(e.message); }
+  };
+}
+function escapeHtml(s) { return String(s || "").replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); }
+function escapeAttr(s) { return escapeHtml(s).replace(/"/g, """); }
 session().then(route);
 window.addEventListener("popstate", route);
