@@ -12,17 +12,56 @@
     <h1>YOURS</h1>
     <div class="rule"></div>
     <p class="hinge">A home you’re in charge of.</p>
-    <form id="door" action="#" method="post">
-      <label for="email">Email</label>
+    <form id="door">
+      <label for="displayName">Name</label>
+      <input id="displayName" name="displayName" placeholder="Your name" />
+      <label for="handle" style="margin-top:0.7rem">Handle</label>
+      <input id="handle" name="handle" placeholder="jordan" />
+      <label for="email" style="margin-top:0.7rem">Email</label>
       <input id="email" name="email" type="email" required placeholder="you@example.com" autocomplete="email" />
+      <label for="password" style="margin-top:0.7rem">Password</label>
+      <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" />
       <button type="submit">Create your home</button>
+      <button type="button" id="signin" style="margin-top:0.45rem;background:#2a2a2c;color:#f4f0e8">I already have a home</button>
       <p class="fine">One person. One home. We don’t keep your face. We don’t search faces.<br />Design it. Build it. Create. The creator is yours.</p>
+      <p class="fine" id="msg"></p>
     </form>
   </main>
   <script>
-    document.getElementById("door").addEventListener("submit", function (e) {
+    const msg = document.getElementById("msg");
+    async function send(path, body) {
+      const res = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed");
+      return data;
+    }
+    document.getElementById("door").addEventListener("submit", async (e) => {
       e.preventDefault();
-      alert("Door is live. Auth wires next. Your draft stays on YOURS.");
+      msg.textContent = "";
+      try {
+        await send("/api/signup", {
+          displayName: document.getElementById("displayName").value,
+          handle: document.getElementById("handle").value,
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value,
+        });
+        location.href = "/home";
+      } catch (err) { msg.textContent = err.message; }
+    });
+    document.getElementById("signin").addEventListener("click", async () => {
+      msg.textContent = "";
+      try {
+        await send("/api/login", {
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value,
+        });
+        location.href = "/home";
+      } catch (err) { msg.textContent = err.message; }
     });
   </script>
 </body>
