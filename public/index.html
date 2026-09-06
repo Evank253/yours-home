@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YOURS — A home you’re in charge of.</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="stage">
+    <p class="kicker">First time</p>
+    <h1>YOURS</h1>
+    <div class="rule"></div>
+    <p class="hinge">A home you’re in charge of.</p>
+    <form id="door" action="#" method="post">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" required placeholder="you@example.com" autocomplete="email" />
+      <button type="submit">Create your home</button>
+      <p class="fine">One person. One home. We don’t keep your face. We don’t search faces.<br />Design it. Build it. Create. The creator is yours.</p>
+    </form>
+  </main>
+  <script>
+    document.getElementById("door").addEventListener("submit", function (e) {
+      e.preventDefault();
+      alert("Door is live. Auth wires next. Your draft stays on YOURS.");
+    });
+  </script>
+</body>
+</html>

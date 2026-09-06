@@ -1,0 +1,12 @@
+{
+  "name": "yours-home",
+  "private": true,
+  "version": "0.1.0",
+  "description": "YOURS — a home you’re in charge of",
+  "scripts": {
+    "start": "node src/server.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
