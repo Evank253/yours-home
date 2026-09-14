@@ -4,7 +4,9 @@
   "version": "0.2.0",
   "description": "YOURS — a home you are in charge of",
   "scripts": {
-    "start": "node src/server.mjs"
+    "start": "node src/server.mjs",
+    "check": "node --check src/server.mjs && node --check src/auth.mjs && node --check src/circle.mjs && node --check src/extra.mjs && node --check src/store.mjs && node --check public/app.js && node --check public/clarity.js && node --check public/doors.js",
+    "smoke": "node tests/smoke.mjs"
   },
   "engines": {
     "node": ">=18"
