@@ -12,7 +12,7 @@ async function session() {
   try {
     const d = await api("/api/me");
     me = d.user;
-    who.innerHTML = "@" + me.handle + ' <a class="handle" href="/settings">Keys</a> <button class="ghost" id="out" type="button">Leave</button>';
+    who.innerHTML = "@" + escapeHtml(me.handle) + ' <a class="handle" href="/settings">Keys</a> <button class="ghost" id="out" type="button">Leave</button>';
     const out = $("#out");
     if (out) out.onclick = async () => { await api("/api/logout", { method: "POST", body: "{}" }); location.href = "/"; };
   } catch {
@@ -45,8 +45,8 @@ async function loadFriends() {
   try {
     const { friends, incoming } = await api("/api/friends");
     $("#inbox").innerHTML =
-      (incoming.length ? incoming.map((h) => `<div class="card hit"><span>@${h} wants in</span><button class="gold" data-ok="${h}" type="button">Accept</button></div>`).join("") : "") +
-      (friends.length ? `<p class="sub">Home circle: ${friends.map((h) => `<a class="handle" href="/u/${h}">@${h}</a>`).join(" ")}</p>` : "");
+      (incoming.length ? incoming.map((h) => `<div class="card hit"><span>@${escapeHtml(h)} wants in</span><button class="gold" data-ok="${escapeAttr(h)}" type="button">Accept</button></div>`).join("") : "") +
+      (friends.length ? `<p class="sub">Home circle: ${friends.map((h) => `<a class="handle" href="/u/${encodeURIComponent(h)}">@${escapeHtml(h)}</a>`).join(" ")}</p>` : "");
     document.querySelectorAll("[data-ok]").forEach((b) => {
       b.onclick = async () => { await api("/api/friends/accept", { method: "POST", body: JSON.stringify({ handle: b.dataset.ok }) }); loadFriends(); };
     });
@@ -56,16 +56,16 @@ async function loadFeed() {
   const { posts } = await api("/api/feed");
   $("#feed").innerHTML = posts.length ? posts.map((p) => {
     const notes = (p.comments || []).map((c) => `<p class="sub">@${escapeHtml(c.handle)} — ${escapeHtml(c.text)}</p>`).join("");
-    return `<div class="card"><a class="handle" href="/u/${p.handle}">@${p.handle}</a><p>${escapeHtml(p.text)}</p><button class="ghost" data-like="${p.id}" type="button">Like ${p.likes}</button><div>${notes}</div><div class="row" style="margin-top:0.4rem"><input data-c="${p.id}" placeholder="Reply" style="flex:1" /><button class="ghost" data-send="${p.id}" type="button">Reply</button></div></div>`;
+    return `<div class="card"><a class="handle" href="/u/${encodeURIComponent(p.handle)}">@${escapeHtml(p.handle)}</a><p>${escapeHtml(p.text)}</p><button class="ghost" data-like="${escapeAttr(p.id)}" type="button">Like ${Number(p.likes) || 0}</button><div>${notes}</div><div class="row" style="margin-top:0.4rem"><input data-c="${escapeAttr(p.id)}" placeholder="Reply" style="flex:1" /><button class="ghost" data-send="${escapeAttr(p.id)}" type="button">Reply</button></div></div>`;
   }).join("") : `<p class="sub">No posts yet.</p>`;
   document.querySelectorAll("[data-like]").forEach((b) => {
-    b.onclick = async () => { const { post } = await api("/api/posts/" + b.dataset.like + "/like", { method: "POST", body: "{}" }); b.textContent = "Like " + post.likes; };
+    b.onclick = async () => { const { post } = await api("/api/posts/" + encodeURIComponent(b.dataset.like) + "/like", { method: "POST", body: "{}" }); b.textContent = "Like " + (Number(post.likes) || 0); };
   });
   document.querySelectorAll("[data-send]").forEach((b) => {
     b.onclick = async () => {
-      const box = document.querySelector('[data-c="' + b.dataset.send + '"]');
+      const box = document.querySelector('[data-c="' + CSS.escape(b.dataset.send) + '"]');
       try {
-        await api("/api/posts/" + b.dataset.send + "/comments", { method: "POST", body: JSON.stringify({ text: box.value }) });
+        await api("/api/posts/" + encodeURIComponent(b.dataset.send) + "/comments", { method: "POST", body: JSON.stringify({ text: box?.value || "" }) });
         loadFeed();
       } catch (e) { alert(e.message); }
     };
@@ -74,13 +74,13 @@ async function loadFeed() {
 function officialEmbed(url) {
   try {
     const u = new URL(url);
+    if ((u.hostname === "www.youtube.com" || u.hostname === "youtube.com") && u.pathname.startsWith("/embed/")) return u.href;
     if (u.hostname === "www.youtube.com" || u.hostname === "youtube.com") {
-      const id = u.searchParams.get("v"); if (id) return "https://www.youtube.com/embed/" + id;
+      const id = u.searchParams.get("v"); if (id) return "https://www.youtube.com/embed/" + encodeURIComponent(id);
     }
-    if (u.hostname === "youtu.be") { const id = u.pathname.slice(1); if (id) return "https://www.youtube.com/embed/" + id; }
-    if (u.hostname === "www.youtube.com" && u.pathname.startsWith("/embed/")) return u.href;
-    if (u.hostname === "player.vimeo.com") return u.href;
-    if (u.hostname === "vimeo.com") { const id = u.pathname.split("/").filter(Boolean)[0]; if (id) return "https://player.vimeo.com/video/" + id; }
+    if (u.hostname === "youtu.be") { const id = u.pathname.slice(1); if (id) return "https://www.youtube.com/embed/" + encodeURIComponent(id); }
+    if (u.hostname === "player.vimeo.com" && u.pathname.startsWith("/video/")) return u.href;
+    if (u.hostname === "vimeo.com") { const id = u.pathname.split("/").filter(Boolean)[0]; if (id) return "https://player.vimeo.com/video/" + encodeURIComponent(id); }
   } catch (_) {}
   return "";
 }
@@ -95,16 +95,16 @@ function renderBlock(b) {
 }
 async function showPage(handle) {
   try {
-    const { page, user, live } = await api("/api/page/" + handle);
-    view.innerHTML = `<p class="live-dot">${live ? "LIVE — " + escapeHtml(live.title) : ""}</p><h1 class="page-hero">${escapeHtml(page.title)}</h1><p class="sub">@${user.handle} · ${escapeHtml(page.bio)}</p><p class="sub">Plan: ${page.plan}</p>${(page.blocks || []).map(renderBlock).join("")}<div class="row"><button class="ghost" id="add" type="button">Add</button>${me && me.handle === user.handle ? `<a class="handle" href="/customize">Edit page</a>` : ""}</div>`;
+    const { page, user, live } = await api("/api/page/" + encodeURIComponent(handle));
+    view.innerHTML = `<p class="live-dot">${live ? "LIVE — " + escapeHtml(live.title) : ""}</p><h1 class="page-hero">${escapeHtml(page.title)}</h1><p class="sub">@${escapeHtml(user.handle)} · ${escapeHtml(page.bio)}</p><p class="sub">Plan: ${escapeHtml(page.plan)}</p>${(page.blocks || []).map(renderBlock).join("")}<div class="row"><button class="ghost" id="add" type="button">Add</button>${me && me.handle === user.handle ? `<a class="handle" href="/customize">Edit page</a>` : ""}</div>`;
     $("#add").onclick = async () => { try { await api("/api/friends", { method: "POST", body: JSON.stringify({ handle: user.handle }) }); alert("Requested."); } catch (e) { alert(e.message); } };
   } catch (e) { view.innerHTML = `<p class="sub">${escapeHtml(e.message)}</p>`; }
 }
 async function showBuild() {
   if (!me) return (view.innerHTML = `<p class="sub">Sign in first.</p>`);
-  const { page } = await api("/api/page/" + me.handle);
+  const { page } = await api("/api/page/" + encodeURIComponent(me.handle));
   const lines = (page.blocks || []).map((b) => { if (b.type === "embed") return "embed " + (b.url || ""); if (b.type === "link") return "link " + (b.url || ""); return b.text || ""; }).join("\n");
-  view.innerHTML = `<h2>Build</h2><p class="sub">One thought per line. Start with link or embed plus an official URL.</p><div class="card blocks"><label>Title</label><br/><input id="title" value="${escapeAttr(page.title)}" /><br/><br/><label>Bio</label><br/><textarea id="bio">${escapeHtml(page.bio)}</textarea><br/><br/><label>Plan</label><select id="plan"><option value="house">House</option><option value="grid">Grid</option><option value="stage">Stage</option></select><p class="sub">Blocks</p><textarea id="blocks">${escapeHtml(lines)}</textarea><br/><br/><button class="gold" id="save" type="button">Save page</button> <a class="handle" href="/u/${me.handle}">View public</a></div>`;
+  view.innerHTML = `<h2>Build</h2><p class="sub">One thought per line. Start with link or embed plus an official URL.</p><div class="card blocks"><label>Title</label><br/><input id="title" value="${escapeAttr(page.title)}" /><br/><br/><label>Bio</label><br/><textarea id="bio">${escapeHtml(page.bio)}</textarea><br/><br/><label>Plan</label><select id="plan"><option value="house">House</option><option value="grid">Grid</option><option value="stage">Stage</option></select><p class="sub">Blocks</p><textarea id="blocks">${escapeHtml(lines)}</textarea><br/><br/><button class="gold" id="save" type="button">Save page</button> <a class="handle" href="/u/${encodeURIComponent(me.handle)}">View public</a></div>`;
   $("#plan").value = page.plan;
   $("#save").onclick = async () => {
     const blocks = $("#blocks").value.split("\n").map((line) => line.trim()).filter(Boolean).map((text, i) => {
@@ -114,7 +114,7 @@ async function showBuild() {
     });
     try {
       await api("/api/page", { method: "PUT", body: JSON.stringify({ title: $("#title").value, bio: $("#bio").value, plan: $("#plan").value, blocks }) });
-      location.href = "/u/" + me.handle;
+      location.href = "/u/" + encodeURIComponent(me.handle);
     } catch (e) { alert(e.message); }
   };
 }
@@ -122,7 +122,7 @@ function showSearch() {
   view.innerHTML = `<h2>People</h2><p class="sub">Name or @handle. Never a face.</p><div class="row"><input id="q" placeholder="Name or handle" style="flex:1" /><button class="gold" id="go" type="button">Find</button></div><div id="hits"></div>`;
   const run = async () => {
     const { hits } = await api("/api/search?q=" + encodeURIComponent($("#q").value));
-    $("#hits").innerHTML = hits.map((h) => `<div class="card hit"><a class="handle" href="/u/${h.handle}">${escapeHtml(h.displayName)} · @${h.handle}</a><button class="ghost" data-add="${h.handle}" type="button">Add</button></div>`).join("") || `<p class="sub">No homes match.</p>`;
+    $("#hits").innerHTML = hits.map((h) => `<div class="card hit"><a class="handle" href="/u/${encodeURIComponent(h.handle)}">${escapeHtml(h.displayName)} · @${escapeHtml(h.handle)}</a><button class="ghost" data-add="${escapeAttr(h.handle)}" type="button">Add</button></div>`).join("") || `<p class="sub">No homes match.</p>`;
     document.querySelectorAll("[data-add]").forEach((b) => {
       b.onclick = async () => { try { await api("/api/friends", { method: "POST", body: JSON.stringify({ handle: b.dataset.add }) }); b.textContent = "Requested"; } catch (e) { alert(e.message); } };
     });
@@ -139,10 +139,10 @@ async function showStudio() {
   if (!me) return (view.innerHTML = `<p class="sub">Sign in first.</p>`);
   const { groups } = await api("/api/groups");
   const rooms = await api("/api/rooms").catch(() => ({ groups: [] }));
-  view.innerHTML = `<h2>Studio</h2><p class="sub">Rooms on this house.</p><div class="card row"><input id="gname" placeholder="Room name" style="flex:1" /><button class="gold" id="gmake" type="button">Start group</button></div><div id="glist">${groups.map((g) => `<div class="card">${escapeHtml(g.name)} · owner @${g.owner}</div>`).join("") || "<p class='sub'>Your rooms will land here.</p>"}</div><h2>Open rooms</h2><div>${(rooms.groups || []).map((g) => `<div class="card hit"><span>${escapeHtml(g.name)} · @${g.owner}</span><button class="ghost" data-join="${g.id}" type="button">Join</button></div>`).join("") || "<p class='sub'>None yet.</p>"}</div>`;
+  view.innerHTML = `<h2>Studio</h2><p class="sub">Rooms on this house.</p><div class="card row"><input id="gname" placeholder="Room name" style="flex:1" /><button class="gold" id="gmake" type="button">Start group</button></div><div id="glist">${groups.map((g) => `<div class="card">${escapeHtml(g.name)} · owner @${escapeHtml(g.owner)}</div>`).join("") || "<p class='sub'>Your rooms will land here.</p>"}</div><h2>Open rooms</h2><div>${(rooms.groups || []).map((g) => `<div class="card hit"><span>${escapeHtml(g.name)} · @${escapeHtml(g.owner)}</span><button class="ghost" data-join="${escapeAttr(g.id)}" type="button">Join</button></div>`).join("") || "<p class='sub'>None yet.</p>"}</div>`;
   $("#gmake").onclick = async () => { try { await api("/api/groups", { method: "POST", body: JSON.stringify({ name: $("#gname").value }) }); showStudio(); } catch (e) { alert(e.message); } };
   document.querySelectorAll("[data-join]").forEach((b) => {
-    b.onclick = async () => { try { await api("/api/groups/" + b.dataset.join + "/join", { method: "POST", body: "{}" }); showStudio(); } catch (e) { alert(e.message); } };
+    b.onclick = async () => { try { await api("/api/groups/" + encodeURIComponent(b.dataset.join) + "/join", { method: "POST", body: "{}" }); showStudio(); } catch (e) { alert(e.message); } };
   });
 }
 async function showSettings() {
@@ -173,7 +173,9 @@ async function showSettings() {
     } catch (e) { alert(e.message); }
   };
 }
-function escapeHtml(s) { return String(s || "").replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">"); }
-function escapeAttr(s) { return escapeHtml(s).replace(/"/g, """); }
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function escapeAttr(s) { return escapeHtml(s); }
 session().then(route);
 window.addEventListener("popstate", route);
