@@ -1,7 +1,9 @@
 import crypto from "node:crypto";
 
-const secret =
-  process.env.YOURS_SESSION_SECRET || "dev-only-change-me-before-public";
+const secret = process.env.YOURS_SESSION_SECRET;
+if (!secret || secret.length < 32) {
+  throw new Error("YOURS_SESSION_SECRET must be set to at least 32 characters");
+}
 
 export function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
@@ -19,18 +21,13 @@ export function checkPassword(password, stored) {
 }
 
 export function signSession(userId) {
-  const body = Buffer.from(JSON.stringify({ userId, t: Date.now() })).toString(
-    "base64url"
-  );
+  const body = Buffer.from(JSON.stringify({ userId, t: Date.now() })).toString("base64url");
   const sig = crypto.createHmac("sha256", secret).update(body).digest("base64url");
   return `${body}.${sig}`;
 }
 
 export function readSession(cookieHeader) {
-  const raw = String(cookieHeader || "")
-    .split(";")
-    .map((s) => s.trim())
-    .find((s) => s.startsWith("yours="));
+  const raw = String(cookieHeader || "").split(";").map((s) => s.trim()).find((s) => s.startsWith("yours="));
   if (!raw) return null;
   const token = raw.slice(6);
   const [body, sig] = token.split(".");
@@ -39,19 +36,15 @@ export function readSession(cookieHeader) {
   const a = Buffer.from(sig);
   const b = Buffer.from(expect);
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
-  try {
-    return JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(Buffer.from(body, "base64url").toString("utf8")); } catch { return null; }
 }
 
 export function setCookie(token) {
-  return `yours=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=1209600`;
+  return `yours=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=1209600`;
 }
 
 export function clearCookie() {
-  return "yours=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0";
+  return "yours=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0";
 }
 
 export function handleOk(h) {
