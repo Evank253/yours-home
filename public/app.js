@@ -28,6 +28,7 @@ function route() {
   if (p === "/live") return showLive();
   if (p === "/studio") return showStudio();
   if (p === "/settings") return showSettings();
+  if (p === "/rooms") return showPrivateRooms();
   return showDesk();
 }
 function showDesk() {
@@ -145,6 +146,67 @@ async function showStudio() {
     b.onclick = async () => { try { await api("/api/groups/" + b.dataset.join + "/join", { method: "POST", body: "{}" }); showStudio(); } catch (e) { alert(e.message); } };
   });
 }
+
+async function showPrivateRooms() {
+  if (!me) return (view.innerHTML = `<p class="sub">Sign in to enter your private Home.</p>`);
+  try {
+    const { rooms, settings } = await api("/api/private-rooms");
+    const byId = new Map(rooms.map((room) => [room.id, room]));
+    const ordered = settings.order.map((id) => byId.get(id)).filter(Boolean);
+    const statusLabel = (status) => status === "foundation" ? "Existing foundation" : status === "in-development" ? "In development" : "Planned — engine not yet implemented";
+    view.innerHTML = `
+      <h2>Your Home · Private Rooms</h2>
+      <p class="sub">These rooms belong to your account. Only you can see this workspace. Your public Master Room is a separate presentation.</p>
+      <div class="card"><strong>Master Room</strong><p class="sub">Your public-facing presentation and portfolio. You choose what the world sees.</p><a class="handle" href="/u/${encodeURIComponent(me.handle)}">View your public Master Room</a></div>
+      <div id="privateRoomList">${ordered.map((room, index) => `
+        <section class="card private-room">
+          <div class="row" style="align-items:center;justify-content:space-between">
+            <h3>${escapeHtml(room.name)}</h3>
+            <span class="sub">${escapeHtml(statusLabel(room.status))}</span>
+          </div>
+          <p>${escapeHtml(room.summary)}</p>
+          <div class="row">
+            <button class="ghost" data-up="${room.id}" ${index===0?"disabled":""} type="button">Move up</button>
+            <button class="ghost" data-down="${room.id}" ${index===ordered.length-1?"disabled":""} type="button">Move down</button>
+            <label>Workspace theme
+              <select data-theme="${room.id}">
+                <option value="default" ${settings.layouts[room.id]?.theme==="default"?"selected":""}>Default</option>
+                <option value="dark" ${settings.layouts[room.id]?.theme==="dark"?"selected":""}>Dark</option>
+                <option value="light" ${settings.layouts[room.id]?.theme==="light"?"selected":""}>Light</option>
+                <option value="midnight" ${settings.layouts[room.id]?.theme==="midnight"?"selected":""}>Midnight</option>
+                <option value="warm" ${settings.layouts[room.id]?.theme==="warm"?"selected":""}>Warm</option>
+              </select>
+            </label>
+          </div>
+          <p class="fine">Capability status: ${escapeHtml(statusLabel(room.status))}. A room listing is not a claim that its full creative engine is ready.</p>
+        </section>`).join("")}</div>
+      <button class="gold" id="saveRoomSettings" type="button">Save my room layout</button>
+      <p class="fine" id="roomSaveStatus"></p>`;
+    const move = (id, delta) => {
+      const index = settings.order.indexOf(id);
+      const next = index + delta;
+      if (index < 0 || next < 0 || next >= settings.order.length) return;
+      [settings.order[index], settings.order[next]] = [settings.order[next], settings.order[index]];
+      showPrivateRooms();
+    };
+    document.querySelectorAll("[data-up]").forEach((button) => button.onclick = () => move(button.dataset.up, -1));
+    document.querySelectorAll("[data-down]").forEach((button) => button.onclick = () => move(button.dataset.down, 1));
+    document.querySelectorAll("[data-theme]").forEach((select) => {
+      select.onchange = () => { settings.layouts[select.dataset.theme] = { theme: select.value }; };
+    });
+    $("#saveRoomSettings").onclick = async () => {
+      try {
+        const { settings: saved } = await api("/api/private-rooms/settings", {
+          method: "PUT", body: JSON.stringify(settings)
+        });
+        $("#roomSaveStatus").textContent = "Private room layout saved.";
+      } catch (error) { $("#roomSaveStatus").textContent = error.message; }
+    };
+  } catch (error) {
+    view.innerHTML = `<p class="sub">${escapeHtml(error.message)}</p>`;
+  }
+}
+
 async function showSettings() {
   if (!me) return (view.innerHTML = `<p class="sub">Sign in first.</p>`);
   view.innerHTML = `<h2>Keys</h2><p class="sub">Your name on the door. Export what we store. Leave for good if you want the house gone.</p><div class="card"><label>Display name</label><input id="dname" value="${escapeAttr(me.displayName)}" /><div class="row" style="margin-top:0.7rem"><button class="gold" id="saveName" type="button">Save name</button><button class="ghost" id="exp" type="button">Export</button></div></div><div class="card"><p class="sub">This deletes the home on this machine.</p><button class="ghost" id="gone" type="button">Delete home</button></div>`;
