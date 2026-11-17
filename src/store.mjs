@@ -13,6 +13,7 @@ function empty() {
     lives: {},
     posts: [],
     comments: [],
+    roomSettings: {},
   };
 }
 
@@ -20,6 +21,7 @@ export function load() {
   try {
     const db = JSON.parse(fs.readFileSync(file, "utf8"));
     if (!Array.isArray(db.comments)) db.comments = [];
+    if (!db.roomSettings || typeof db.roomSettings !== "object" || Array.isArray(db.roomSettings)) db.roomSettings = {};
     return db;
   } catch {
     return empty();
