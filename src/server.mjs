@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { load, save, defaultPage } from "./store.mjs";
 import { listCircle, acceptCircle } from "./circle.mjs";
 import { handleExtra } from "./extra.mjs";
+import { getRoomCatalog, defaultRoomSettings, normalizeRoomSettings } from "./rooms.mjs";
 import {
   hashPassword,
   checkPassword,
@@ -114,6 +115,7 @@ const server = http.createServer(async (req, res) => {
       };
       db.users.push(user);
       db.pages[handle] = defaultPage(user);
+      db.roomSettings[handle] = defaultRoomSettings();
       save(db);
       return json(res, 201, { user: { handle, displayName } }, {
         "Set-Cookie": setCookie(signSession(user.id)),
@@ -137,6 +139,21 @@ const server = http.createServer(async (req, res) => {
       const user = me(req, db);
       if (!user) return json(res, 401, { error: "Sign in." });
       return json(res, 200, { user: { handle: user.handle, displayName: user.displayName, email: user.email } });
+    }
+    if (method === "GET" && url.pathname === "/api/private-rooms") {
+      const user = me(req, db);
+      if (!user) return json(res, 401, { error: "Sign in." });
+      const settings = normalizeRoomSettings(db.roomSettings[user.handle] || defaultRoomSettings());
+      return json(res, 200, { rooms: getRoomCatalog(), settings });
+    }
+    if (method === "PUT" && url.pathname === "/api/private-rooms/settings") {
+      const user = me(req, db);
+      if (!user) return json(res, 401, { error: "Sign in." });
+      const submitted = await body(req);
+      const settings = normalizeRoomSettings(submitted);
+      db.roomSettings[user.handle] = settings;
+      save(db);
+      return json(res, 200, { settings });
     }
     if (method === "GET" && url.pathname === "/api/search") {
       const needle = (url.searchParams.get("q") || "").trim().toLowerCase().replace(/^@/, "");
@@ -257,7 +274,7 @@ const server = http.createServer(async (req, res) => {
     if (method === "GET" && url.pathname === "/doors") {
       return sendFile(res, path.join(publicDir, "doors.html"));
     }
-    const spa = ["/home", "/customize", "/search", "/live", "/studio", "/settings"];
+    const spa = ["/home", "/customize", "/search", "/live", "/studio", "/settings", "/rooms"];
     if (method === "GET" && (spa.includes(url.pathname) || url.pathname.startsWith("/u/"))) {
       return sendFile(res, path.join(publicDir, "app.html"));
     }
