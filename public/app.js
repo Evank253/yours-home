@@ -159,7 +159,7 @@ async function showPrivateRooms() {
       <p class="sub">These rooms belong to your account. Only you can see this workspace. Your public Master Room is a separate presentation.</p>
       <div class="card"><strong>Master Room</strong><p class="sub">Your public-facing presentation and portfolio. You choose what the world sees.</p><a class="handle" href="/u/${encodeURIComponent(me.handle)}">View your public Master Room</a></div>
       <div id="privateRoomList">${ordered.map((room, index) => `
-        <section class="card private-room">
+        <section class="card private-room" data-room="${room.id}">
           <div class="row" style="align-items:center;justify-content:space-between">
             <h3>${escapeHtml(room.name)}</h3>
             <span class="sub">${escapeHtml(statusLabel(room.status))}</span>
@@ -187,7 +187,17 @@ async function showPrivateRooms() {
       const next = index + delta;
       if (index < 0 || next < 0 || next >= settings.order.length) return;
       [settings.order[index], settings.order[next]] = [settings.order[next], settings.order[index]];
-      showPrivateRooms();
+      const container = $("#privateRoomList");
+      for (const roomId of settings.order) {
+        const card = container.querySelector('[data-room="' + roomId + '"]');
+        if (card) container.appendChild(card);
+      }
+      container.querySelectorAll("[data-up]").forEach((button, i) => {
+        button.disabled = i === 0;
+      });
+      container.querySelectorAll("[data-down]").forEach((button, i, all) => {
+        button.disabled = i === all.length - 1;
+      });
     };
     document.querySelectorAll("[data-up]").forEach((button) => button.onclick = () => move(button.dataset.up, -1));
     document.querySelectorAll("[data-down]").forEach((button) => button.onclick = () => move(button.dataset.down, 1));
